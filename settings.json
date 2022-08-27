@@ -1,0 +1,12 @@
+{
+  "options": [
+    {
+      "name": "language",
+      "value": "english"
+    },
+    {
+      "name": "music directory's",
+      "value": []
+    }
+  ]
+}
