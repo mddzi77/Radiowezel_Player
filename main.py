@@ -1,12 +1,12 @@
 import mutagen
 import json
-import gui as g
 import PySimpleGUI as sg
 import pandas as pd
 import os.path as path
 import datetime as dt
 import numpy as np
 import pandas as pd
+from gui import Gui
 from os import listdir, mkdir
 from pygame import mixer
 
@@ -202,11 +202,41 @@ class Player:
         return (s_elapsed, s_left), (p_elapsed, p_left)
 
 
-class App:
+class App(object):
 
     def __init__(self):
         with open('settings.json', encoding='UTF-8') as f:
             self.settings = json.load(f)
 
+        self.window1 = None
+        self.window2 = None
+        self.gui = Gui()
+
     def run(self):
-        pass
+        """
+        App main loop
+        """
+
+        self.window1 = Gui().main_window()
+        counter = 0
+
+        while True:
+            window, event, values = sg.read_all_windows(timeout=1000, timeout_key='_clock_') # # #
+
+            print(event, values)   # # # debugging # # #
+
+            # closing specified window at event
+            if event == sg.WIN_CLOSED or event == '_cancel_':
+                window.close()
+                if window == self.window2:
+                    self.window2 = None
+                    self.window1.enable()
+                elif window == self.window1:
+                    break
+            elif event == '_clock_':
+                counter += 1
+                self.window1['_song_progress_'].update(counter)
+
+
+if __name__ == '__main__':
+    App().run()
