@@ -7,7 +7,7 @@ import pandas as pd
 import gui as g
 from os import listdir, mkdir, path
 from pygame import mixer
-from player_db import PlayerDatabase
+from playerdatabase import PlayerDatabase
 
 
 class Player:
@@ -146,7 +146,7 @@ class App(object):
 
             # clock for counting time of the playlists and songs
             elif event == '_clock_':
-                if self.player.loaded:
+                try:
                     song_t, playlist_t = self.player.music_clock()
 
                     # update progressbars
@@ -158,6 +158,8 @@ class App(object):
                     self.window1['_left_s_'](song_t[1].strftime('%M:%S'))
                     self.window1['_elapsed_p_'](playlist_t[0].strftime('%M:%S'))
                     self.window1['_left_p_'](playlist_t[1].strftime('%M:%S'))
+                except AttributeError:
+                    pass
 
 
 if __name__ == '__main__':

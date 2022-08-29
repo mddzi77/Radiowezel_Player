@@ -6,8 +6,6 @@ data = [[randrange(0, 100) for i in range(4)] for j in range(100)]
 data2 = [[1, 'GenYoutube.net_Mike-Posner-I-Took-A-Pill-In-Ibiza-Original_41GZVVcxQps', '22:22'],
          [2, '01 Macklemore  Ryan Lewis - Can_t Hold Us _ft Ray Dalton__', '33:33']]
 
-print(data)
-
 ''' Global default values for widgets and windows'''
 # color palette used in app
 colors = {
