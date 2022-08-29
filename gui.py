@@ -23,13 +23,15 @@ colors = {
     'SNOW': '#FFFAFA',
     'GREY': '#7B8FA2'
         }
+
 # gets main screen size
 for m in get_monitors():
     if m.is_primary:
         screen = (m.width, m.height)
 
 
-# widgets used in app
+# # # Widgets created used class inheritance # # #
+
 class Button(sg.Button):
     def __init__(self, *args, border_width=0, font='Comic', button_color=(colors['TEXT_1'], colors['COLOR_1']),
                  mouseover_colors=(colors['TEXT_1'], colors['COLOR_2']), **kwargs):
@@ -95,8 +97,6 @@ class Table(sg.Table):
                  selected_row: int = None,
                  **kwargs):
 
-        print('taaaaaaaaaaaaaaaaaaaaaaak') if row_colors else print('nieeeeeeeeeeeeeeeeeeeeeeeeeeeee')
-
         super().__init__(*args,
                          text_color=text_color,
                          background_color=background_color,
@@ -116,9 +116,30 @@ class Table(sg.Table):
                          **kwargs)
 
 
-class DefaultWindow(sg.Window):
+class DefWindow(sg.Window):
     """
-    Default look of app window
+        Default look of app window
+    """
+
+    def __init__(self, *args, layout: list, finalize=True, background_color=colors['BGR_1'], margins=(0, 0),
+                 use_custom_titlebar=True, titlebar_background_color=colors['BGR_1'], titlebar_font='Comic',
+                 titlebar_text_color=colors['TEXT_1'], **kwargs):
+        layout = sg.Column(
+            [[sg.Column(layout, background_color=colors['SNOW'], pad=(8, 5), expand_x=True, expand_y=True)]],
+            background_color=colors['SNOW'],
+            pad=((4, 4), (0, 4)),
+            expand_x=True,
+            expand_y=True)
+
+        super().__init__(*args, layout=[[layout]], finalize=finalize, background_color=background_color,
+                         margins=margins, use_custom_titlebar=use_custom_titlebar,
+                         titlebar_font=titlebar_font, titlebar_text_color=titlebar_text_color,
+                         titlebar_background_color=titlebar_background_color, **kwargs)
+
+
+class WindowPlaybar(sg.Window):
+    """
+    Default window with addition of Playbar
     """
     def __init__(self, *args, layout: list, finalize=True, background_color=colors['BGR_1'], margins=(0, 0),
                  use_custom_titlebar=True, titlebar_background_color=colors['BGR_1'], titlebar_font='Comic',
@@ -131,7 +152,7 @@ class DefaultWindow(sg.Window):
             expand_x=True,
             expand_y=True)
 
-        layout = [[layout]] + [[Gui.music_progressbar()]]
+        layout = [[layout]] + [[playbar()]]
 
         super().__init__(*args, layout=layout, finalize=finalize, background_color=background_color,
                          margins=margins, use_custom_titlebar=use_custom_titlebar,
@@ -139,121 +160,124 @@ class DefaultWindow(sg.Window):
                          titlebar_background_color=titlebar_background_color, **kwargs)
 
 
-class Gui(object):
+# # # Ready to implement layouts # # #
+
+def playbar():
     """
-    Gui class containing windows and layouts to be used in app
+    Container for all information and controls to music playback
+    :return: Ready to implement layout
     """
-    def __init__(self):
-        pass
 
-    ''' Common elements '''
-    @staticmethod
-    def music_progressbar():
-        """
-        Container for all information and controls to music playback
-        :return: Ready to implement layout
-        """
-
-        layout = [
-            [
-                sg.Push(background_color=colors['BGR_1']),
-                Button('', key='_play_pause_', image_source='icons\\play.png',
-                       button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-                Button('', key='_stop_', image_source='icons\\stop.png',
-                       button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-                Button('', key='_mute_unmute_', image_source='icons\\volume.png',
-                       button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-                sg.Push(background_color=colors['BGR_1'])
-            ],
-            [
-                sg.Column(
-                    [[Text1('Song:', background_color=colors['BGR_1']),
-                      sg.Push(background_color=colors['BGR_1']),
-                      Text1('--:--', background_color=colors['BGR_1']),
-                      ProgressBar(key='_song_progress_'),
-                      Text1('--:--', background_color=colors['BGR_1'])]],
-                    colors['BGR_1'],
-                    expand_x=True
-                )
-            ],
-            [
-                sg.Column(
-                    [[Text1('Playlist:', background_color=colors['BGR_1']),
-                      sg.Push(background_color=colors['BGR_1']),
-                      Text1('--:--', background_color=colors['BGR_1']),
-                      ProgressBar(key='_playlist_progress_'),
-                      Text1('--:--', background_color=colors['BGR_1'])]],
-                    colors['BGR_1'],
-                    expand_x=True
-                )
-            ],
-        ]
-
-        layout = sg.Column(layout, colors['BGR_1'], pad=(5, 5))
-
-        return sg.Column([[layout]], colors['BGR_1'], pad=(0, 0))
-
-    @staticmethod
-    def header():
-
-        layout = [[
-            Text1('asdasd', background_color=colors['BGR_1']),
+    layout = [
+        [
             sg.Push(background_color=colors['BGR_1']),
-            Button(
-                image_source='icons\\close.png',
-                button_color=(colors['BGR_1'], colors['BGR_1']),
-                image_subsample=23,
-                mouseover_colors='#EB2628',
-                key='_cancel_'
+            Button('', key='_play_pause_', image_source='icons\\play.png',
+                   button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
+            Button('', key='_stop_', image_source='icons\\stop.png',
+                   button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
+            Button('', key='_mute_unmute_', image_source='icons\\volume.png',
+                   button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
+            sg.Push(background_color=colors['BGR_1'])
+        ],
+        [
+            sg.Column(
+                [[Text1('Song:'),
+                  sg.Push(background_color=colors['BGR_1']),
+                  Text1('--:--', key='_elapsed_s_', justification='c', size=(7, 1)),
+                  ProgressBar(key='_song_progress_'),
+                  Text1('--:--', key='_left_s_', justification='c', size=(7, 1))]],
+                colors['BGR_1'],
+                expand_x=True
             )
-        ]]
+        ],
+        [
+            sg.Column(
+                [[Text1('Playlist:'),
+                  sg.Push(background_color=colors['BGR_1']),
+                  Text1('--:--', key='_elapsed_p_', justification='c', size=(7, 1)),
+                  ProgressBar(key='_playlist_progress_'),
+                  Text1('--:--', key='_left_p_', justification='c', size=(7, 1))]],
+                colors['BGR_1'],
+                expand_x=True
+            )
+        ],
+    ]
 
-        return sg.Column(layout, colors['BGR_1'], pad=(0, 0), expand_x=True)
+    layout = sg.Column(layout, colors['BGR_1'], pad=(5, 5))
 
-    ''' Windows used in app '''
-    def main_window(self):
-        """
-        Main window with app menu, table of today's playlists and music progressbar
-        :return: Window element
-        """
+    return sg.Column([[layout]], colors['BGR_1'], pad=(0, 0))
 
-        col_1 = Frame(
-            'OPTION MENU',
-            [
-                [Button('Enable Autoplay', key='_autoplay_enabler_')],
-                [Button('Music Database', key='_music_db_')],
-                [Button('Playlists Editor', key='_editor_')],
-                [Button('Settings', key='_settings_')]
-            ]
+
+def header():
+
+    layout = [[
+        Text1('asdasd', background_color=colors['BGR_1']),
+        sg.Push(background_color=colors['BGR_1']),
+        Button(
+            image_source='icons\\close.png',
+            button_color=(colors['BGR_1'], colors['BGR_1']),
+            image_subsample=23,
+            mouseover_colors='#EB2628',
+            key='_cancel_'
         )
+    ]]
 
-        col_2 = Frame(
-            '',
-            [
-                [Text2('Today\'s Playlists:')],
-                [Table(
-                    data,
-                    ['Nr', 'Start Time', 'Break\'s length', 'Playlist Length'],
-                    key='_today_plalist_',
-                    col_widths=[3, 17, 17, 18],
-                    justification='c',
-                    num_rows=10,
-                    selected_row=2,
-                    hide_vertical_scroll=True
-                )],
-                [Text2('Selected Playlist:')],
-                [Table(
-                    data2,
-                    ['Nr', 'Title', 'Length'],
-                    key='_selected_playlist_',
-                    col_widths=[3, 44, 8],
-                    justification='c',
-                    num_rows=8,
-                    hide_vertical_scroll=True
-                )]
-            ],
-        )
+    return sg.Column(layout, colors['BGR_1'], pad=(0, 0), expand_x=True)
 
-        layout = [[col_1, sg.Push(background_color=colors['SNOW']), col_2]]
 
-        return DefaultWindow('School Radio Player', layout=layout)
+# # # Windows used in apps # # #
+
+def main_window():
+    """
+    Main window with app menu, table of today's playlists and music progressbar
+    :return: Window element
+    """
+
+    col_1 = Frame(
+        'OPTION MENU',
+        [
+            [Button('Enable Autoplay', key='_autoplay_enabler_')],
+            [Button('Music Database', key='_music_db_')],
+            [Button('Playlists Editor', key='_editor_')],
+            [Button('Settings', key='_settings_')]
+        ]
+    )
+
+    col_2 = Frame(
+        '',
+        [
+            [Text2('Today\'s Playlists:')],
+            [Table(
+                data,
+                ['Nr', 'Start Time', 'Break\'s length', 'Playlist Length'],
+                key='_today_plalist_',
+                col_widths=[4, 19, 19, 20],
+                justification='c',
+                num_rows=10,
+                selected_row=None,
+                hide_vertical_scroll=True
+            )],
+            [Text2('Selected Playlist:')],
+            [Table(
+                data2,
+                ['Nr', 'Title', 'Length'],
+                key='_selected_playlist_',
+                col_widths=[4, 50, 8],
+                justification='c',
+                num_rows=8,
+                hide_vertical_scroll=True
+            )]
+        ],
+    )
+
+    layout = [[col_1, sg.Push(background_color=colors['SNOW']), col_2]]
+
+    return WindowPlaybar('School Radio Player', layout=layout)
+
+
+def settings_window():
+    """
+    Creates settings window, to choose language, and music directories
+    :return:
+    """
+
