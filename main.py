@@ -125,7 +125,7 @@ class App(object):
         counter = 0
 
         while True:
-            window, event, values = sg.read_all_windows(timeout=100, timeout_key='_clock_') # # #
+            window, event, values = sg.read_all_windows(timeout=1000, timeout_key='_clock_') # # #
 
             print(window, event, values)   # # # debugging # # #
 
@@ -137,6 +137,10 @@ class App(object):
                     self.window1.enable()
                 elif window == self.window1:
                     break
+            elif event == '_settings_':
+                self.window2 = g.settings_window()
+                self.window1.disable()
+
             # interacting with playback
             elif event == '_play_pause_':
                 p = ['Myslovitz-D_ugo__ d_wi_ku samotno_ci.mp3', 'Najnowszy Klip.mp3', 'Myslovitz - Mie_ czy by_ tekst .mp3']

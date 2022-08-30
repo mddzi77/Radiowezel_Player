@@ -38,6 +38,14 @@ class Button(sg.Button):
                          mouseover_colors=mouseover_colors, **kwargs)
 
 
+class Combo(sg.Combo):
+    def __init__(self, *args, background_color=colors['BGR_3'], text_color=colors['TEXT_1'], font='Comic',
+                 button_background_color=colors['COLOR_1'], button_arrow_color=colors['COLOR_3'], **kwargs):
+
+        super().__init__(*args, background_color=background_color, text_color=text_color, font=font,
+                         button_background_color=button_background_color, button_arrow_color=button_arrow_color)
+
+
 class Slider(sg.Slider):
     def __init__(self, *args, relief=sg.RELIEF_FLAT, font='Comic', text_color=colors['TEXT_1'],
                  trough_color=colors['BGR_3'], background_color=colors['COLOR_1'], **kwargs):
@@ -114,6 +122,36 @@ class Table(sg.Table):
                          **kwargs)
 
 
+class Listbox(sg.Listbox):
+    def __init__(self,
+                 *args,
+                 text_color=colors['TEXT_1'],
+                 background_color=colors['BGR_3'],
+                 max_col_width=100,
+                 highlight_text_color=colors['GREY'],
+                 highlight_background_color=colors['COLOR_3'],
+                 font='Comic',
+                 sbar_relief=sg.RELIEF_FLAT,
+                 sbar_trough_color=colors['BGR_3'],
+                 sbar_background_color=colors['COLOR_1'],
+                 sbar_arrow_color=colors['COLOR_3'],
+                 enable_events=True,
+                 **kwargs):
+
+        super().__init__(*args,
+                         text_color=text_color,
+                         background_color=background_color,
+                         highlight_text_color=highlight_text_color,
+                         highlight_background_color=highlight_background_color,
+                         font=font,
+                         sbar_relief=sbar_relief,
+                         sbar_trough_color=sbar_trough_color,
+                         sbar_background_color=sbar_background_color,
+                         sbar_arrow_color=sbar_arrow_color,
+                         enable_events=enable_events,
+                         **kwargs)
+
+
 class DefWindow(sg.Window):
     """
         Default look of app window
@@ -160,46 +198,51 @@ class WindowPlaybar(sg.Window):
 
 # # # Ready to implement layouts # # #
 
-def playbar():
+def playbar(configuration: str ='both'):
     """
     Container for all information and controls to music playback
+    :param configuration: Decides which progressbar will be shown 'both' | 'song' | 'playlist'
     :return: Ready to implement layout
     """
 
-    layout = [
-        [
-            sg.Push(background_color=colors['BGR_1']),
-            Button('', key='_play_pause_', image_source='icons\\play.png',
-                   button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-            Button('', key='_stop_', image_source='icons\\stop.png',
-                   button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-            Button('', key='_mute_unmute_', image_source='icons\\volume.png',
-                   button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-            sg.Push(background_color=colors['BGR_1'])
-        ],
-        [
-            sg.Column(
-                [[Text1('Song:'),
-                  sg.Push(background_color=colors['BGR_1']),
-                  Text1('--:--', key='_elapsed_s_', justification='c', size=(7, 1)),
-                  ProgressBar(key='_song_progress_'),
-                  Text1('--:--', key='_left_s_', justification='c', size=(7, 1))]],
-                colors['BGR_1'],
-                expand_x=True
-            )
-        ],
-        [
-            sg.Column(
-                [[Text1('Playlist:'),
-                  sg.Push(background_color=colors['BGR_1']),
-                  Text1('--:--', key='_elapsed_p_', justification='c', size=(7, 1)),
-                  ProgressBar(key='_playlist_progress_'),
-                  Text1('--:--', key='_left_p_', justification='c', size=(7, 1))]],
-                colors['BGR_1'],
-                expand_x=True
-            )
-        ],
-    ]
+
+    buttons = [[
+        sg.Push(colors['BGR_1']),
+        Button('', key='_play_pause_', image_source='icons\\play.png',
+               button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
+        Button('', key='_stop_', image_source='icons\\stop.png',
+               button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
+        Button('', key='_mute_unmute_', image_source='icons\\volume.png',
+               button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
+        sg.Push(colors['BGR_1'])
+    ]]
+    song = [[
+        sg.Column(
+            [[Text1('Song:'),
+              sg.Push(colors['BGR_1']),
+              Text1('--:--', key='_elapsed_s_', justification='c', size=(7, 1)),
+              ProgressBar(key='_song_progress_'),
+              Text1('--:--', key='_left_s_', justification='c', size=(7, 1))]],
+            colors['BGR_1'],
+            expand_x=True)
+    ]]
+    playlist = [[
+        sg.Column(
+            [[Text1('Playlist:'),
+              sg.Push(colors['BGR_1']),
+              Text1('--:--', key='_elapsed_p_', justification='c', size=(7, 1)),
+              ProgressBar(key='_playlist_progress_'),
+              Text1('--:--', key='_left_p_', justification='c', size=(7, 1))]],
+            colors['BGR_1'],
+            expand_x=True)
+    ]]
+
+    if configuration == 'both':
+        layout = buttons + song + playlist
+    elif configuration == 'song':
+        layout = buttons + song
+    elif configuration == 'playlist':
+        layout = buttons + playlist
 
     layout = sg.Column(layout, colors['BGR_1'], pad=(5, 5))
 
@@ -228,17 +271,26 @@ def header():
 def main_window():
     """
     Main window with app menu, table of today's playlists and music progressbar
-    :return: Window element
+    :return: WindowPlaybar element
     """
 
     col_1 = Frame(
-        'OPTION MENU',
+        '',
         [
-            [Button('Enable Autoplay', key='_autoplay_enabler_')],
-            [Button('Music Database', key='_music_db_')],
-            [Button('Playlists Editor', key='_editor_')],
-            [Button('Settings', key='_settings_')]
-        ]
+            [Text2('OPTION MENU:', text_color=colors['COLOR_1'], expand_x=True, justification='c')],
+            [sg.VPush(colors['SNOW'])],
+            [Button('Enable Autoplay', key='_autoplay_enabler_', size=(25, 1))],
+            [sg.VSeparator(colors['SNOW'], )],
+            [Button('Music Database', key='_music_db_', size=(25, 1))],
+            [sg.VSeparator(colors['SNOW'])],
+            [Button('Playlists Editor', key='_editor_', size=(25, 1))],
+            [sg.VSeparator(colors['SNOW'])],
+            [Button('Settings', key='_settings_', size=(25, 1))],
+            [sg.VPush(colors['SNOW'])]
+        ],
+        element_justification='c',
+        size=(335, 200),
+        expand_y=True
     )
 
     col_2 = Frame(
@@ -249,7 +301,7 @@ def main_window():
                 data,
                 ['Nr', 'Start Time', 'Break\'s length', 'Playlist Length'],
                 key='_today_plalist_',
-                col_widths=[4, 19, 19, 20],
+                col_widths=[4, 21, 21, 21],
                 justification='c',
                 num_rows=10,
                 selected_row=None,
@@ -260,7 +312,7 @@ def main_window():
                 data2,
                 ['Nr', 'Title', 'Length'],
                 key='_selected_playlist_',
-                col_widths=[4, 50, 8],
+                col_widths=[4, 55, 8],
                 justification='c',
                 num_rows=8,
                 hide_vertical_scroll=True
@@ -268,7 +320,7 @@ def main_window():
         ],
     )
 
-    layout = [[col_1, sg.Push(background_color=colors['SNOW']), col_2]]
+    layout = [[col_1, sg.Push(colors['SNOW']), col_2]]
 
     return WindowPlaybar('School Radio Player', layout=layout)
 
@@ -276,6 +328,16 @@ def main_window():
 def settings_window():
     """
     Creates settings window, to choose language, and music directories
-    :return:
+    :return: DefWindow element
     """
+    layout = [
+        [Text2('Language')],
+        [Combo('English', 'Polish')],
+        [Text2('Music directories')],
+        [Button('Add', key='_add_dir_'), Button('Remove', key='_remove_dir_')],
+        [Listbox([], key='_lang_list_')],
+        [Button('Save', key='_save_settings_'), Button('Cancel', key='_cancel_')]
+    ]
+
+    return DefWindow('Settings', layout=layout)
 
