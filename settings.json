@@ -1,12 +1,1 @@
-{
-  "options": [
-    {
-      "name": "language",
-      "value": "english"
-    },
-    {
-      "name": "music directory's",
-      "value": []
-    }
-  ]
-}
+{"options": [{"name": "language", "value": "English"}, {"name": "music directory's", "value": ["E:/Muzyka/Life Is A Festival", "E:/Muzyka/TACO/Taco Hemingway - Umowa o Dzie\u0142o"]}]}

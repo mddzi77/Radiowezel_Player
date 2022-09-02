@@ -108,7 +108,8 @@ class App(object):
         with open('settings.json', encoding='UTF-8') as f:
             self.settings = json.load(f)
 
-        PlayerDatabase().refresh_()
+        self.db = PlayerDatabase()
+        self.db.refresh_()
 
         self.window1 = None
         self.window2 = None
@@ -116,18 +117,33 @@ class App(object):
         self.player = None
         self.playing = False
 
+    def close(self, window: sg.Window):
+        """
+        Close secondary window
+        :param window: window element from read_all_windows()
+        :return: None
+        """
+        window.close()
+        self.window2 = None
+        self.window1.enable()
+
     def run(self):
         """
         App main loop
         """
 
         self.window1 = g.main_window()
+        self.window1.keep_on_top_set()
+
+        # values to temporarily use in app or to indicate state
         counter = 0
+        dir_list = self.settings['options'][1]['value']
+        sorting = 'default'
 
         while True:
             window, event, values = sg.read_all_windows(timeout=1000, timeout_key='_clock_') # # #
 
-            print(window, event, values)   # # # debugging # # #
+            print(event, values)   # # # debugging # # #
 
             # closing window
             if event == sg.WIN_CLOSED or event == '_cancel_':
@@ -137,16 +153,73 @@ class App(object):
                     self.window1.enable()
                 elif window == self.window1:
                     break
+
+            # main window
             elif event == '_settings_':
                 self.window2 = g.settings_window()
+                # updating default values
+                self.window2['_dir_list_'](dir_list)
+                self.window2['_lang_'](self.settings['options'][0]['value'])
+
                 self.window1.disable()
+                self.window2.keep_on_top_set()
+            elif event == '_music_db_':
+                self.window2 = g.music_db_window(self.db)
+
+                self.window1.disable()
+                self.window2.keep_on_top_set()
+
+            # music database
+            elif event == ['_to_used_', '_to_unused']:
+                # invert used and unused state
+                table = values['_tab_group_']
+                index = self.window2[table].get_indexes()
+            elif event in ['_all_browse_', '_unused_browse_', '_used_browse_']:
+                # search songs in table
+                text_in = values[event]  # get typed text
+                # get in which table search
+                event_to_table = {
+                    '_all_browse_': '_all_table_',
+                    '_unused_browse_': '_unused_table_',
+                    '_used_browse_': '_used_table_'
+                }
+                table = event_to_table[event]
+                # get unfiltered content
+                if event == '_all_browse_':
+                    content = self.db.get_songs()
+                elif event == '_unused_browse_':
+                    content = self.db.get_songs(condition=('used', False))
+                elif event == '_used_browse_':
+                    content = self.db.get_songs(condition=('used', True))
+
+                searched = [value for value in content if text_in.lower() in value[0].lower()]  # filter content
+
+                self.window2[table](searched)
+
+            # settings window
+            elif event == '_add_dir_':
+                # add new music directory
+                dir_list.append(values[event])
+                self.window2['_dir_list_'](dir_list)
+            elif event == '_remove_dir_':
+                # remove selected music directory
+                dir_list.pop(self.window2['_dir_list_'].get_indexes()[0])
+                self.window2['_dir_list_'](dir_list)
+            elif event == '_save_settings_':
+                # save settings
+                self.settings['options'][1]['value'] = dir_list
+                self.settings['options'][0]['value'] = values['_lang_']
+                with open('settings.json', 'w', encoding='UTF-8') as f:
+                    f.write(json.dumps(self.settings))
+
+                self.db.refresh_()
+                self.close(window)
 
             # interacting with playback
             elif event == '_play_pause_':
                 p = ['Myslovitz-D_ugo__ d_wi_ku samotno_ci.mp3', 'Najnowszy Klip.mp3', 'Myslovitz - Mie_ czy by_ tekst .mp3']
                 self.player = Player(p, 'music')
                 self.player.play()
-                print('krok 3')
 
             # clock for counting time of the playlists and songs
             elif event == '_clock_':
