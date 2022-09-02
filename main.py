@@ -14,9 +14,8 @@ class Player:
     """
     Module for playing created playlists
     """
-    def __init__(self, playlist: list[str], music_dir: str):
+    def __init__(self, playlist: list[list]):
         self.playlist = playlist
-        self.music_dir = music_dir
 
         mixer.init()
         self.db = PlayerDatabase()
@@ -30,13 +29,16 @@ class Player:
         # get lengths of songs in the playlist in seconds
         self.songs_lengths = []
         for song in playlist:
-            self.songs_lengths.append(self.db.songs['duration'].loc[self.db.songs['title'] == song].values[0])
+            self.songs_lengths.append(song[2])
         self.playlist_length = np.sum(self.songs_lengths)
 
     def play(self):
         mixer.music.set_volume(0.8)
         if not self.loaded:
-            mixer.music.load(path.join(self.music_dir, self.playlist[self.counter]))
+            mixer.music.load(path.join(
+                self.playlist[self.counter][1],
+                self.playlist[self.counter][0]
+            ))
             mixer.music.play()
             self.loaded = True
         else:
@@ -45,6 +47,12 @@ class Player:
     @staticmethod
     def pause():
         mixer.music.pause()
+
+    def stop(self):
+        mixer.music.stop()
+        mixer.music.unload()
+        self.loaded = False
+        mixer.quit()
 
     def music_clock(self):
         """
@@ -92,7 +100,6 @@ class Player:
             self.play()
         # if song ended anf it's the last song in playlist then end player
         elif s_left.minute == 0 and s_left.second == 0 and len(self.playlist) == self.counter + 1:
-            print('playlist ended')
             # reset values
             mixer.music.unload()
             self.counter = 0
@@ -126,6 +133,33 @@ class App(object):
         window.close()
         self.window2 = None
         self.window1.enable()
+        if self.player.loaded:
+            self.player.stop()
+        try:
+            if self.player.loaded:
+                self.player.stop()
+                self.player = None
+        except AttributeError:
+            pass
+
+    def get_value(self, values, window, index=False):
+        # invert used and unused state
+        tab = values['_tab_group_']  # get selected tab
+        # convert selected tab to selected table
+        tab_to_table = {
+            '_tab_all_': '_all_table_',
+            '_tab_unused_': '_unused_table_',
+            '_tab_used_': '_used_table_'
+        }
+        table = tab_to_table[tab]
+
+        value = window[table].Values[values[table][0]][0]  # get selected title
+
+        if index:
+            # get selected value index in database
+            value = self.db.songs['title'].loc[self.db.songs['title'] == value].index.tolist()[0]
+
+        return value
 
     def run(self):
         """
@@ -138,7 +172,6 @@ class App(object):
         # values to temporarily use in app or to indicate state
         counter = 0
         dir_list = self.settings['options'][1]['value']
-        sorting = 'default'
 
         while True:
             window, event, values = sg.read_all_windows(timeout=1000, timeout_key='_clock_') # # #
@@ -148,6 +181,13 @@ class App(object):
             # closing window
             if event == sg.WIN_CLOSED or event == '_cancel_':
                 window.close()
+                # stop playback if it's on
+                try:
+                    if self.player.loaded:  # # # add condition to not stop autoplay playback # # #
+                        self.player.stop()
+                        self.player = None
+                except AttributeError:
+                    pass
                 if window == self.window2:
                     self.window2 = None
                     self.window1.enable()
@@ -171,30 +211,23 @@ class App(object):
 
             # music database
             elif event == '_used_unused_':
-                # invert used and unused state
-                tab = values['_tab_group_']  # get selected tab
-                # convert selected tab to selected table
-                tab_to_table = {
-                    '_tab_all_': '_all_table_',
-                    '_tab_unused_': '_unused_table_',
-                    '_tab_used_': '_used_table_'
-                }
-                table = tab_to_table[tab]
+                try:
+                    index = self.get_value(values, self.window2, index=True)  # get selected value index
+                    # change to opposite state
+                    value = self.db.songs['used'].iloc[index]
+                    self.db.songs.loc[index] = self.db.songs.loc[index].replace(to_replace=value, value=not value)
 
-                title = self.window2[table].Values[values[table][0]][0]  # get selected title
-                # get selected value index in database
-                index = self.db.songs['title'].loc[self.db.songs['title'] == title].index.tolist()[0]
-                # change to opposite state
-                value = self.db.songs['used'].iloc[index]
-                self.db.songs.loc[index] = self.db.songs.loc[index].replace(to_replace=value, value=not value)
-
-                # clear inputs in case
-                self.window2['_all_browse_']('')
-                self.window2['_unused_browse_']('')
-                self.window2['_used_browse_']('')
-                # update used and unused tables
-                self.window2['_unused_table_'](self.db.get_songs(condition=('used', False)))
-                self.window2['_used_table_'](self.db.get_songs(condition=('used', True)))
+                    # clear inputs in case
+                    self.window2['_all_browse_']('')
+                    self.window2['_unused_browse_']('')
+                    self.window2['_used_browse_']('')
+                    # update used and unused tables
+                    self.window2['_unused_table_'](self.db.get_songs(condition=('used', False)))
+                    self.window2['_used_table_'](self.db.get_songs(condition=('used', True)))
+                    # save changes to database
+                    self.db.save_data('songs.db', self.db.songs)
+                except IndexError:
+                    pass
             elif event in ['_all_browse_', '_unused_browse_', '_used_browse_']:
                 # search songs in table
                 text_in = values[event]  # get typed text
@@ -216,6 +249,14 @@ class App(object):
                 searched = [value for value in content if text_in.lower() in value[0].lower()]  # filter content
 
                 self.window2[table](searched)
+            elif event == '_play_' and window == self.window2:
+                try:
+                    title = self.get_value(values, self.window2)  # get selected value title
+                    p = self.db.songs.loc[self.db.songs['title'] == title].values.tolist()
+                    self.player = Player(p)
+                    self.player.play()
+                except IndexError:
+                    pass
 
             # settings window
             elif event == '_add_dir_':
@@ -237,9 +278,9 @@ class App(object):
                 self.close(window)
 
             # interacting with playback
-            elif event == '_play_pause_':
-                p = ['Myslovitz-D_ugo__ d_wi_ku samotno_ci.mp3', 'Najnowszy Klip.mp3', 'Myslovitz - Mie_ czy by_ tekst .mp3']
-                self.player = Player(p, 'music')
+            elif event == '_play_' and window == self.window1:
+                #p = ['Myslovitz-D_ugo__ d_wi_ku samotno_ci.mp3', 'Najnowszy Klip.mp3', 'Myslovitz - Mie_ czy by_ tekst .mp3']
+                #self.player = Player(p)
                 self.player.play()
 
             # clock for counting time of the playlists and songs
@@ -247,15 +288,22 @@ class App(object):
                 try:
                     song_t, playlist_t = self.player.music_clock()
 
-                    # update progressbars
-                    self.window1['_song_progress_'](self.player.pos, self.player.songs_lengths[self.player.counter])
-                    self.window1['_playlist_progress_'](self.player.pos_playlist, self.player.playlist_length)
+                    # get current window
+                    cur_window = self.window1 if window == self.window1 else self.window2
 
+                    # update progressbars
+                    cur_window['_song_progress_'](self.player.pos, self.player.songs_lengths[self.player.counter])
                     # update texts
-                    self.window1['_elapsed_s_'](song_t[0].strftime('%M:%S'))
-                    self.window1['_left_s_'](song_t[1].strftime('%M:%S'))
-                    self.window1['_elapsed_p_'](playlist_t[0].strftime('%M:%S'))
-                    self.window1['_left_p_'](playlist_t[1].strftime('%M:%S'))
+                    cur_window['_elapsed_s_'](song_t[0].strftime('%M:%S'))
+                    cur_window['_left_s_'](song_t[1].strftime('%M:%S'))
+
+                    # only for windows that have playlist progressbar
+                    if cur_window.Title != 'Music Database':
+                        # update progressbars
+                        cur_window['_playlist_progress_'](self.player.pos_playlist, self.player.playlist_length)
+                        # update texts
+                        cur_window['_elapsed_p_'](playlist_t[0].strftime('%M:%S'))
+                        cur_window['_left_p_'](playlist_t[1].strftime('%M:%S'))
                 except AttributeError:
                     pass
 

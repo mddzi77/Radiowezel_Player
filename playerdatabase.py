@@ -13,7 +13,7 @@ class PlayerDatabase(object):
         # initialize pandas dataframes
         try:
             self.songs = pd.DataFrame(
-                self.load_data('archive\\songs.db', 'ssisb'),
+                self.load_data('songs.db', 'ssisb'),
                 columns=['title', 'path', 'duration', 'category', 'used']
             )
         except FileNotFoundError:
@@ -22,7 +22,7 @@ class PlayerDatabase(object):
             )
         try:
             self.day_playlists = pd.DataFrame(
-                self.load_data('archive\\day_playlist.db', 'lsii'),
+                self.load_data('day_playlist.db', 'lsii'),
                 columns=['songs', 'start time', 'break length', 'playlist duration']
             )
         except FileNotFoundError:
