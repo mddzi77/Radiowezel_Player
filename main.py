@@ -170,10 +170,31 @@ class App(object):
                 self.window2.keep_on_top_set()
 
             # music database
-            elif event == ['_to_used_', '_to_unused']:
+            elif event == '_used_unused_':
                 # invert used and unused state
-                table = values['_tab_group_']
-                index = self.window2[table].get_indexes()
+                tab = values['_tab_group_']  # get selected tab
+                # convert selected tab to selected table
+                tab_to_table = {
+                    '_tab_all_': '_all_table_',
+                    '_tab_unused_': '_unused_table_',
+                    '_tab_used_': '_used_table_'
+                }
+                table = tab_to_table[tab]
+
+                title = self.window2[table].Values[values[table][0]][0]  # get selected title
+                # get selected value index in database
+                index = self.db.songs['title'].loc[self.db.songs['title'] == title].index.tolist()[0]
+                # change to opposite state
+                value = self.db.songs['used'].iloc[index]
+                self.db.songs.loc[index] = self.db.songs.loc[index].replace(to_replace=value, value=not value)
+
+                # clear inputs in case
+                self.window2['_all_browse_']('')
+                self.window2['_unused_browse_']('')
+                self.window2['_used_browse_']('')
+                # update used and unused tables
+                self.window2['_unused_table_'](self.db.get_songs(condition=('used', False)))
+                self.window2['_used_table_'](self.db.get_songs(condition=('used', True)))
             elif event in ['_all_browse_', '_unused_browse_', '_used_browse_']:
                 # search songs in table
                 text_in = values[event]  # get typed text

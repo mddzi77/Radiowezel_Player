@@ -478,9 +478,7 @@ def music_db_window(db: PlayerDatabase):
         '',
         [
             [sg.VPush(colors['SNOW'])],
-            [Text2('Change to: ')],
-            [Button('Unused', key='_to_unused_', size=(25, 1))],
-            [Button('Used', key='_to_used_', size=(25, 1))],
+            [Button('Change Used Tag', key='_used_unused_', size=(25, 1))],
             [Text2('', font='Comic 1')],
             [Button('Download song from YT', key='_yt_', size=(25, 1))],
             [sg.VPush(colors['SNOW'])]
