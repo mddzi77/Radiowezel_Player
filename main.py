@@ -4,6 +4,8 @@ import PySimpleGUI as sg
 import datetime as dt
 import numpy as np
 import pandas as pd
+import pygame
+
 import gui as g
 from os import listdir, mkdir, path
 from pygame import mixer
@@ -159,6 +161,17 @@ class App(object):
 
         return value
 
+    def play_pause(self, window: g.WindowPlaybar):
+        self.playing = not self.playing
+        if self.playing:
+            self.player.play()
+            print('play')
+            window['_play_pause_'](image_filename='icons\\pause.png')
+        else:
+            self.player.pause()
+            print('pause')
+            window['_play_pause_'](image_filename='icons\\play.png')
+
     def run(self):
         """
         App main loop
@@ -184,8 +197,11 @@ class App(object):
                     if self.player.loaded:  # # # add condition to not stop autoplay playback # # #
                         self.player.stop()
                         self.player = None
-                except AttributeError:
-                    pass
+                        # restore default values
+                        counter = 0
+                        self.playing = False
+                except AttributeError as err:
+                    print(f'AttributeError: {err}')
                 if window == self.window2:
                     self.window2 = None
                     self.window1.enable()
@@ -247,14 +263,67 @@ class App(object):
                 searched = [value for value in content if text_in.lower() in value[0].lower()]  # filter content
 
                 self.window2[table](searched)
-            elif event == '_play_' and window == self.window2:
+            elif event == '_play_pause_' and window == self.window2:
+                # play or pause playback
                 try:
-                    title = self.get_value(values, self.window2)  # get selected value title
-                    p = self.db.songs.loc[self.db.songs['title'] == title].values.tolist()
-                    self.player = Player(p)
-                    self.player.play()
-                except IndexError:
+                    index = self.get_value(values, self.window2, index=True)  # get selected value title
+                    if self.player:
+                        self.play_pause(self.window2)
+                    else:
+                        p = [self.db.songs.iloc[index].values.tolist()]
+                        print(p)
+                        self.player = Player(p)
+                        self.play_pause(self.window2)
+                except IndexError as err:
+                    print(f'IndexError: {err}')
                     pass
+            elif event in ['_all_table_', '_unused_table_', '_used_table_']:
+                # restore default value of counter
+                counter = 0
+
+                # if song is currently playing than stop playback
+                if self.playing:
+                    self.play_pause(self.window2)
+                    self.player = None
+                    self.window2['_play_pause_'](image_filename='icons\\play.png')
+            elif event in ['_forward_', '_backward_']:
+                # go to next or
+                # add or subtract how much movement count to selected value index
+                if event == '_forward_':
+                    counter += 1
+                else:
+                    counter -= 1
+                try:
+                    # invert used and unused state
+                    tab = values['_tab_group_']  # get selected tab
+                    # convert selected tab to selected table
+                    tab_to_table = {
+                        '_tab_all_': '_all_table_',
+                        '_tab_unused_': '_unused_table_',
+                        '_tab_used_': '_used_table_'
+                    }
+                    table = tab_to_table[tab]
+
+                    # repeat song if selected backward and song is played more than 5 seconds
+                    try:
+                        song_t, playlist_t = self.player.music_clock()
+                        if event == '_backward_' and song_t[0].minute * 60 + song_t[0].second > 3:
+                            counter += 1
+                    except AttributeError:
+                        pass
+                    # get selected title with movement count included
+                    title = window[table].Values[values[table][0] + counter][0]
+
+                    # get selected value index in database
+                    index = self.db.songs['title'].loc[self.db.songs['title'] == title].index.tolist()[0]
+
+                    # play preview of the next or previous song
+                    p = [self.db.songs.iloc[index].values.tolist()]
+                    self.player = Player(p)
+                    self.playing = False
+                    self.play_pause(self.window2)
+                except IndexError as err:
+                    print(f'IndexError: {err}')
 
             # settings window
             elif event == '_add_dir_':
@@ -275,19 +344,13 @@ class App(object):
                 self.db.refresh_()
                 self.close(window)
 
-            # interacting with playback
-            elif event == '_play_' and window == self.window1:
-                #p = ['Myslovitz-D_ugo__ d_wi_ku samotno_ci.mp3', 'Najnowszy Klip.mp3', 'Myslovitz - Mie_ czy by_ tekst .mp3']
-                #self.player = Player(p)
-                self.player.play()
-
             # clock for counting time of the playlists and songs
             elif event == '_clock_':
                 try:
                     song_t, playlist_t = self.player.music_clock()
 
                     # get current window
-                    cur_window = self.window1 if window == self.window1 else self.window2
+                    cur_window = self.window2 if self.window2 else self.window1
 
                     # update progressbars
                     cur_window['_song_progress_'](self.player.pos, self.player.songs_lengths[self.player.counter])
@@ -303,7 +366,27 @@ class App(object):
                         cur_window['_elapsed_p_'](playlist_t[0].strftime('%M:%S'))
                         cur_window['_left_p_'](playlist_t[1].strftime('%M:%S'))
                 except AttributeError:
-                    pass
+                    # if there is not initialized player set all playbar values to default
+                    # get current window
+                    cur_window = self.window2 if self.window2 else self.window1
+
+                    # update progressbars
+                    cur_window['_song_progress_'](0, 1)
+                    # update texts
+                    cur_window['_elapsed_s_']('--:--')
+                    cur_window['_left_s_']('--:--')
+
+                    # only for windows that have playlist progressbar
+                    if cur_window.Title != 'Music Database':
+                        # update progressbars
+                        cur_window['_playlist_progress_'](0, 1)
+                        # update texts
+                        cur_window['_elapsed_p_']('--:--')
+                        cur_window['_left_p_']('--:--')
+                except pygame.error:
+                    cur_window = self.window1 if window == self.window1 else self.window2
+                    cur_window['_play_pause_'](image_filename='icons\\play.png')
+                    self.player = None
 
 
 if __name__ == '__main__':

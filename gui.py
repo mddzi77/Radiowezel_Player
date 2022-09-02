@@ -307,13 +307,17 @@ def playbar(configuration: str = 'both'):
     """
     buttons = [[
         sg.Push(colors['BGR_1']),
-        Button('', key='_play_', image_source='icons\\play.png',
+        Button('', key='_backward_', image_filename='icons\\backward.png',
                button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-        Button('', key='_stop_', image_source='icons\\stop.png',
+        Button('', key='_play_pause_', image_filename='icons\\play.png',
                button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-        Button('', key='_mute_unmute_', image_source='icons\\volume.png',
+        Button('', key='_stop_', image_filename='icons\\stop.png',
                button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
-        sg.Push(colors['BGR_1'])
+        Button('', key='_forward_', image_filename='icons\\forward.png',
+               button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30)),
+        sg.Push(colors['BGR_1']),
+        Button('', key='_mute_unmute_', image_filename='icons\\volume.png',
+               button_color=(colors['BGR_1'], colors['BGR_1']), image_size=(30, 30))
     ]]
     song = [[
         sg.Column(
