@@ -133,8 +133,6 @@ class App(object):
         window.close()
         self.window2 = None
         self.window1.enable()
-        if self.player.loaded:
-            self.player.stop()
         try:
             if self.player.loaded:
                 self.player.stop()

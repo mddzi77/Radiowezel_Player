@@ -6,9 +6,6 @@ from os import listdir, mkdir, path
 
 class PlayerDatabase(object):
     def __init__(self, ):
-        # get settings
-        with open('settings.json', encoding='UTF-8') as f:
-            self.settings = json.load(f)['options']
 
         # initialize pandas dataframes
         try:
@@ -52,20 +49,23 @@ class PlayerDatabase(object):
             for row in content_in:
                 new_row = row.split('\t')  # split columns
 
-                # change datatypes
-                for i in range(len(new_row)):
-                    if cols[i] == 's':
-                        pass
-                    elif cols[i] == 'i':
-                        new_row[i] = int(new_row[i])
-                    elif cols[i] == 'f':
-                        new_row[i] = float(new_row[i])
-                    elif cols[i] == 'b':
-                        new_row[i] = bool(new_row[i])
-                    elif cols[i] == 'l':
-                        new_row[i] = list(new_row[i])
+                try:
+                    # change datatypes
+                    for i in range(len(new_row)):
+                        if cols[i] == 's':
+                            pass
+                        elif cols[i] == 'i':
+                            new_row[i] = int(new_row[i])
+                        elif cols[i] == 'f':
+                            new_row[i] = float(new_row[i])
+                        elif cols[i] == 'b':
+                            new_row[i] = bool(new_row[i])
+                        elif cols[i] == 'l':
+                            new_row[i] = list(new_row[i])
 
-                content_out.append(new_row)
+                    content_out.append(new_row)
+                except ValueError as err:
+                    print(f'ValueError: {err}')
 
         return content_out
 
@@ -79,7 +79,6 @@ class PlayerDatabase(object):
         filename = path.join('archive', filename)
         file = open(filename, 'w', encoding='UTF-8')
 
-        content = ''
         for row in self.songs.values:
             for v in row:
                 file.write(str(v))
@@ -133,22 +132,34 @@ class PlayerDatabase(object):
         Checks missing or new audio files and deletes or adds them to database
         :return: None
         """
-        directories = self.settings[1]['value']
+        # get settings
+        with open('settings.json', encoding='UTF-8') as f:
+            settings = json.load(f)['options']
+        directories = settings[1]['value']
 
-        # do all checkings for all directories
-        for d in directories:
-            files = [f for f in listdir(d) if path.isfile(path.join(d, f)) and self.ismusic(f)]  # get list of files
+        if not directories:
+            self.songs = pd.DataFrame(
+                columns=['title', 'path', 'duration', 'category', 'used']
+            )
+        else:
+            # do all checking for all directories
+            for d in directories:
+                files = [f for f in listdir(d) if path.isfile(path.join(d, f)) and self.ismusic(f)]  # get list of files
 
-            # add file to database if it doesn't exist in there
-            for f in files:
-                if f not in self.songs.values:
-                    duration = mutagen.File(path.join(d, f)).info.length
-                    self.songs.loc[len(self.songs)] = [f, d, int(duration), 'None', False]
+                # add file to database if it doesn't exist in there
+                for f in files:
+                    if f not in self.songs.values:
+                        try:
+                            duration = mutagen.File(path.join(d, f)).info.length
+                            if int(duration) not in [b'0None', 0]:
+                                self.songs.loc[len(self.songs)] = [f, d, int(duration), 'None', False]
+                        except mutagen.MutagenError as err:
+                            print(f'mutagen.MutagenError: {err}')
 
-            # remove song from database if it doesn't exist in music folder
-            for s in self.songs['title'].loc[self.songs['path'] == d]:
-                if s not in files:
-                    self.songs = self.songs.drop(self.songs.loc[self.songs['title'] == s].index)
-                    print(self.songs.loc[self.songs['title'] == s].index)
+                # remove song from database if it doesn't exist in music folder
+                for s in self.songs['title'].loc[self.songs['path'] == d]:
+                    if s not in files:
+                        self.songs = self.songs.drop(self.songs.loc[self.songs['title'] == s].index)
+                        print(self.songs.loc[self.songs['title'] == s].index)
 
         self.save_data('songs.db', self.songs)
